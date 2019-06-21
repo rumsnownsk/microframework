@@ -8,6 +8,7 @@ use Symfony\Component\Routing\Loader\YamlFileLoader;
 use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\HttpKernel\Controller\ControllerResolver;
+use Symfony\Component\HttpKernel\Controller\ArgumentResolver;
 use Symfony\Component\Routing\Router;
 
 class App
@@ -20,11 +21,13 @@ class App
     private $arguments;
     private $basePath;
 
+    private $container;
+
     public static $instance = null;
 
-    public static function getInstance($basePath)
+    public static function getInstance($basePath = null)
     {
-        if(is_null(static::$instance)){
+        if (is_null(static::$instance)) {
             static::$instance = new static($basePath);
         };
 
@@ -33,7 +36,6 @@ class App
 
     private function __construct($basePath)
     {
-
         $this->basePath = $basePath;
 
         $this->setRequest();                # для определения объекта запроса
@@ -43,36 +45,46 @@ class App
         $this->routes = $this->router->getRouteCollection();
     }
 
-    private function setRequest(){
+    private function setRequest()
+    {
         $this->request = Request::createFromGlobals();
     }
 
-    private function setRequestContext(){
+    private function setRequestContext()
+    {
         $this->requestContext = new RequestContext();
         $this->requestContext->fromRequest($this->request);
     }
 
-    public function getRequest(){
+    public function getRequest()
+    {
         return $this->request;
     }
 
-    public function getRequestContext(){
+    public function getRequestContext()
+    {
         return $this->requestContext;
     }
 
 
-    private function setRouter(){
+    private function setRouter()
+    {
         $fileLocator = new FileLocator(array(__DIR__));
         $this->router = new Router(
             new YamlFileLoader($fileLocator),
-            $this->basePath."/config/routes.yaml",
-            array('cache_dir' => $this->basePath.'/storage/cache')
+            $this->basePath . "/config/routes.yaml",
+            array('cache_dir' => $this->basePath . '/storage/cache')
         );
     }
 
-    public function getController(){
-
+    public function getController()
+    {
         return (new ControllerResolver())->getController($this->request);
+    }
+
+    public function getArguments($controller)
+    {
+        return (new ArgumentResolver())->getArguments($this->request, $controller);
     }
 
 
@@ -80,18 +92,32 @@ class App
     {
         $matcher = new UrlMatcher($this->routes, $this->requestContext);
         try {
-//            dd($this->request->attributes->add($matcher->match($this->request->getPathInfo())));
             $this->request->attributes->add($matcher->match($this->request->getPathInfo()));
 
-//            dd($matcher->match($this->request->getPathinfo()));
-            $controller = $this->getController();
-            dd($controller);
+            $this->controller = $this->getController();
+            $this->arguments = $this->getArguments($this->controller);
 
-//            $arguments = $this->getArguments($controller);
+//            dd($this->controller, $this->arguments);
 
-        }
-        catch (\Exception $e){
+            $response = call_user_func_array($this->controller, $this->arguments);
+
+        } catch (\Exception $e) {
             exit('error');
         }
+
+        $response->send();
+    }
+
+    public function add($key, $object){
+        $this->container[$key] = $object;
+        return $object;
+    }
+
+    public function get($key){
+        if (isset($this->container[$key])){
+            return $this->container[$key];
+        }
+
+        return null;
     }
 }

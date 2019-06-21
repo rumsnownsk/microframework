@@ -2,10 +2,23 @@
 
 namespace App\Http;
 
-class IndexController
+class IndexController extends Controller
 {
     public function indexAction()
     {
-        dd('hellooo');
+        dump(app()->get('config')->get('database.dbname'));
+        return $this->render("index", [
+            'title' => 'Index Page'
+        ]);
     }
+
+    public function pageAction()
+    {
+        dd('yap!!! - pageAction');
+        return $this->render("index", [
+            'title' => 'Index Page'
+        ]);
+    }
+
+
 }

@@ -1,7 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: rum
- * Date: 19.06.19
- * Time: 13:53
- */
+
+if (!function_exists('app')){
+    function app(){
+        return App\System\App::getInstance();
+    }
+}
