@@ -12,4 +12,6 @@ $app->add('config', $config);
 
 // dd($config->get('database.dbname'));
 
+dd('testing');
+
 return $app;
